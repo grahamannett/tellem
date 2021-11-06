@@ -1,46 +1,12 @@
-import numpy as np
+import torch
 from sklearn import linear_model
 from sklearn.linear_model import SGDClassifier
-import torch
-import torch.nn as nn
 
-from tellem import backend
+from tellem import Capture
 from tellem.implementations.base import ImplementationBase
+from tellem.types import Model, Tensor
 
-from tellem.types import Tensor, Model
-
-
-# class Concept(Tensor):
-#     def __init__(self) -> None:
-#         pass
-
-
-class Capture:
-    def __init__(self, model: nn.Module, layer: str):
-        self.model = model
-        self.layer = layer
-        self._activations = False
-        self._gradients = False
-
-        self.activations = None
-        self.gradients = None
-
-    def capture_activations(self):
-        self._activations = True
-
-        def hook(module, inputs, outputs):
-            self.activations = outputs
-
-        module = dict(self.model.named_modules())[self.layer]
-        module.register_forward_hook(hook)
-
-    def capture_gradients(self):
-        self._gradients = True
-
-        def hook(gradients):
-            self.gradients = gradients
-
-        self.activations.register_hook(hook)
+_USES_TORCH = True
 
 
 class TCAV(ImplementationBase):
@@ -58,7 +24,9 @@ class TCAV(ImplementationBase):
     Useage:
         model = Model()
         tcav = TCAV(model)
-        tcav.use_layers("relu1", "conv2")
+        tcav.capture_layers("relu1", "conv2")
+        tcav.train_cav(concepts, non_concepts)
+        tcav_scores = tcav.test_tcav()
 
         concepts = ...dataloader or tensor of input data for striped images...
         non_concepts = ...tensor of random examples ...
@@ -79,7 +47,7 @@ class TCAV(ImplementationBase):
         for layer in layers:
             self.capture[layer] = Capture(self.model, layer=layer)
             self.capture[layer].capture_activations()
-        # self.captured = CaptureManager(self.model, activation_layers=layers)
+
         self.cav = {layer: None for layer in layers}
 
     def train_cav(self, concepts, non_concepts):
@@ -90,6 +58,7 @@ class TCAV(ImplementationBase):
         _ = self.model(torch.cat((concepts, non_concepts), 0))
 
         for layer in self.capture.keys():
+            # for each layer we are 'testing' we get the activations and train a linear classifier, then save the CAV
             activations = self.capture[layer].activations
             activations = activations.reshape(len(activations), -1).detach().numpy()
             linear_model = SGDClassifier(loss="hinge", eta0=1, learning_rate="constant", penalty=None)
@@ -98,6 +67,17 @@ class TCAV(ImplementationBase):
             self.cav[layer] = linear_model.coef_.reshape(-1)
 
     def test_tcav(self, concepts, non_concepts, y_concepts, y_non_concepts):
+        """[summary]
+        TODO: the tcav score is actually like |(x in X_k : S_{C,k,l}(x) > 0)| / |X_k|
+        Args:
+            concepts ([type]): [description]
+            non_concepts ([type]): [description]
+            y_concepts ([type]): [description]
+            y_non_concepts ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
         y = torch.vstack([y_concepts, y_non_concepts])
         preds = self.model(torch.cat((concepts, non_concepts), 0))
 
@@ -108,8 +88,8 @@ class TCAV(ImplementationBase):
 
         tcav_scores = {}
         for layer in self.capture.keys():
-            gradients = self.capture[layer].gradients
-            gradients = gradients.reshape(len(gradients), -1)
-            tcav_scores[layer] = gradients @ self.cav[layer]
+            grad = self.capture[layer].grad
+            grad = grad.reshape(len(grad), -1)
+            tcav_scores[layer] = grad @ self.cav[layer]
 
         return tcav_scores
