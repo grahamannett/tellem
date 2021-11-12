@@ -66,7 +66,7 @@ class TCAV(ImplementationBase):
             linear_model.fit(activations, y_train)
             self.cav[layer] = linear_model.coef_.reshape(-1)
 
-    def test_tcav(self, concepts, non_concepts, y_concepts, y_non_concepts):
+    def test_cav(self, concepts, non_concepts, y_concepts, y_non_concepts):
         """[summary]
         TODO: the tcav score is actually like |(x in X_k : S_{C,k,l}(x) > 0)| / |X_k|
         Args:

@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 from tellem import Capture
 from tellem.implementations.base import ImplementationBase
@@ -23,20 +23,19 @@ class CAM(ImplementationBase):
         model = Model()
     """
 
-    def __init__(self, model: Model = None, **kwargs):
-        super().__init__(model=model, **kwargs)
+    def __init__(self, model: Model = None, *args, **kwargs):
+        super().__init__(model=model, *args, **kwargs)
         self.capture = {}
+        self.check_model()
 
-        self._check_model()
-
-    def __call__(self, data: Tensor, label: Tensor):
-        _ = self.model(data)
+    def get_cam(self, x: Tensor, y: Tensor, **kwargs):
+        _ = self.model(x)
 
         # x should be one sample so remove dim on activations
         activations = self.activations.squeeze(0)
 
         # get the weights for the class
-        weights = self.weights[label, :].squeeze(0)
+        weights = self.weights[y, :].squeeze(0)
 
         # other library does:  weights[(...,) + (None,) * missing_dims]
         while weights.ndim < activations.ndim:
@@ -50,7 +49,7 @@ class CAM(ImplementationBase):
 
         return cam_vals
 
-    def _check_model(self):
+    def check_model(self):
         # conv feature maps → global average pooling → softmax layer
         modules = list(self.model.named_modules())
         last_linear_layer = None
@@ -66,7 +65,7 @@ class CAM(ImplementationBase):
 
         raise TypeError("Linear Layer Must Follow Conv")
 
-    def use_layer(self, conv_layer: str, fc_layer: str):
+    def use_layer(self, conv_layer: str = None, fc_layer: str = None, **kwargs):
         def activation_hook(module, inputs, outputs):
             self.activations = outputs
 
@@ -74,6 +73,13 @@ class CAM(ImplementationBase):
 
         layer_obj = getattr(self.model, fc_layer)
         self.weights = layer_obj.weight
+
+    @classmethod
+    def __tellem_function__(cls, args):
+        cam = cls(args.model)
+        kwargs = args.kwargs
+        cam.use_layer(**kwargs)
+        return cam.get_cam(**kwargs)
 
 
 class GradCAM(ImplementationBase):
@@ -99,8 +105,8 @@ class GradCAM(ImplementationBase):
 
     """
 
-    def __init__(self, model: Model = None, loss_func: Callable[..., Any] = None, **kwargs):
-        super().__init__(model=model, **kwargs)
+    def __init__(self, model: Model = None, loss_func: Callable[..., Any] = None, *args, **kwargs):
+        super().__init__(model=model, *args, **kwargs)
 
         self.loss_func = loss_func
         self.capture = {}
@@ -109,11 +115,11 @@ class GradCAM(ImplementationBase):
         self.activations = None
         self.grad = None
 
-    def __call__(self, data: Tensor, label: Tensor) -> Tensor:
+    def get_cam_(self, x: Tensor, y: Tensor) -> Tensor:
 
-        preds = self.model(data)
+        preds = self.model(x)
 
-        loss = preds[:, label]
+        loss = preds[:, y]
         self.model.zero_grad()
         loss.backward(retain_graph=True)
 
@@ -125,6 +131,7 @@ class GradCAM(ImplementationBase):
 
         # global average pool gradients over the width and height dimensions
         # and then unsqueeze for element multiplication
+
         grad = grad.mean(dim=(1, 2)).unsqueeze(-1).unsqueeze(-1)
 
         cam_vals = grad * activations

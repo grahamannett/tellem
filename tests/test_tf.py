@@ -1,7 +1,7 @@
 import unittest
 
 import numpy as np
-from tellem.engine.tf import Capture
+from tellem.engine.tf import Capture, ModelWrapper
 
 import tensorflow as tf
 
@@ -21,6 +21,8 @@ class TestCapture(unittest.TestCase):
             ]
         )
 
+        # ModelWrapper.attach(self.model)
+
         self.loss_fn = tf.keras.losses.CategoricalCrossentropy()
         # self.x = np.random.randint(0, 256, size=(64, 32, 32, 3)).astype("float32")
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
@@ -35,42 +37,61 @@ class TestCapture(unittest.TestCase):
         # self.x_2, self.y_2 = x_train[5:10], y_train[5:10]
         return super().setUp()
 
-    def test_model_working(self):
+    # def test_model_working(self):
+
+    # preds = self.model(self.x)
+
+    # self.assertIsNotNone(self.model)
+    # self.assertIsNotNone(preds)
+
+    def test_model_wrapper(self):
+        preds = self.model(self.x)
+
+        capture_manager = {}
+        capture_manager["conv1"] = Capture(self.model, "conv1").capture_activations()
 
         preds = self.model(self.x)
 
-        self.assertIsNotNone(self.model)
-        self.assertIsNotNone(preds)
+        breakpoint()
+        self.assertTrue(True)
+        # self.
+        # self.assertTrue(self.model._been_wrapped)
 
-    def test_activations(self):
-        capture_manager = {}
-        capture_manager["conv1"] = Capture(self.model, "conv1").capture_activations()
-        # capture_manager["conv2"] = Capture(self.model, 1).capture_activations()
+    def test_model_wrapper_activations(self):
+        pass
 
-        _ = self.model(self.x)
-        activations1 = capture_manager["conv1"].activations.numpy()
-        self.assertIsNotNone(activations1)
+    def test_model_wrapper_gradients(self):
+        pass
 
-        _ = self.model(self.x_test[0:5])
-        activations2 = capture_manager["conv1"].activations.numpy()
-        self.assertFalse(np.array_equal(activations1, activations2))
+    # def test_
 
-    @unittest.skip("gradients not implemented for tensorflow yet")
-    def test_gradients(self):
-        capture_manager = {}
-        # capture_manager["conv1"] = Capture(self.model, "conv1").capture_gradients()
+    # def test_activations(self):
+    #     capture_manager = {}
+    #     capture_manager["conv1"] = Capture(self.model, "conv1").capture_activations()
+    #     # capture_manager["conv2"] = Capture(self.model, 1).capture_activations()
 
-        # x = tf.convert_to_tensor(self.x)
-        # y = tf.convert_to_tensor(self.y)
-        # with tf.GradientTape() as tape:
-        #     tape.watch(x)
-        #     outputs = self.model(x)
+    #     _ = self.model(self.x)
+    #     activations1 = capture_manager["conv1"].activations.numpy()
+    #     self.assertIsNotNone(activations1)
 
+    #     _ = self.model(self.x_test[0:5])
+    #     activations2 = capture_manager["conv1"].activations.numpy()
+    #     self.assertFalse(np.array_equal(activations1, activations2))
 
+    # @unittest.skip("gradients not implemented for tensorflow yet")
+    # def test_gradients(self):
+    #     capture_manager = {}
+    # capture_manager["conv1"] = Capture(self.model, "conv1").capture_gradients()
 
-        # breakpoint()
-        # tape.watch(self.x)
-        # outputs = self.model(self.x)
-        # grads = tf.keras.backend.gradients(outputs, self.y)
+    # x = tf.convert_to_tensor(self.x)
+    # y = tf.convert_to_tensor(self.y)
+    # with tf.GradientTape() as tape:
+    #     tape.watch(x)
+    #     outputs = self.model(x)
 
-        # capture_manager["conv1"] = Capture(self.model, "conv1").capture_activations()
+    # breakpoint()
+    # tape.watch(self.x)
+    # outputs = self.model(self.x)
+    # grads = tf.keras.backend.gradients(outputs, self.y)
+
+    # capture_manager["conv1"] = Capture(self.model, "conv1").capture_activations()

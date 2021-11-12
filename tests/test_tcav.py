@@ -8,7 +8,7 @@ from torchvision import datasets, transforms
 # need to fix this import type
 
 from tellem.implementations import TCAV
-from tests.helpers import TestCase
+from tests.common import TestCase
 
 
 class TestTCAV(TestCase):
@@ -32,6 +32,7 @@ class TestTCAV(TestCase):
         # x, y = next(iter(self.train_loader))
 
         tcav = TCAV(self.model)
+
         self.assertIsNotNone(tcav)
 
     def test_cav(self):
