@@ -101,6 +101,7 @@ class GradCAM(ImplementationBase):
     Useage:
         model = Model()
         grad_cam = GradCAM(model, loss_func)
+        grad_cam.use_layer(layer_name)
         grad_cam_overlay = grad_cam(x, y)
 
     """
@@ -115,7 +116,7 @@ class GradCAM(ImplementationBase):
         self.activations = None
         self.grad = None
 
-    def get_cam_(self, x: Tensor, y: Tensor) -> Tensor:
+    def get_gradcam(self, x: Tensor, y: Tensor) -> Tensor:
 
         preds = self.model(x)
 
@@ -123,15 +124,11 @@ class GradCAM(ImplementationBase):
         self.model.zero_grad()
         loss.backward(retain_graph=True)
 
-        # loss = self.loss_func(preds, y)
-        # loss.backward()
-
         grad = self.grad.squeeze(0)
         activations = self.activations.squeeze(0)
 
         # global average pool gradients over the width and height dimensions
         # and then unsqueeze for element multiplication
-
         grad = grad.mean(dim=(1, 2)).unsqueeze(-1).unsqueeze(-1)
 
         cam_vals = grad * activations
