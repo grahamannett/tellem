@@ -13,11 +13,11 @@ class KwargsHelper:
 
     @property
     def kwargs(self):
-        return {k: v for k, v in vars(self).items() if k in self.keys_set}
+        return self.as_kwargs()
 
     @kwargs.getter
     def kwargs(self):
-        return {k: v for k, v in vars(self).items() if k in self.keys_set}
+        return self.as_kwargs()
 
     def as_kwargs(self):
         return {k: v for k, v in vars(self).items() if k in self.keys_set}
@@ -47,6 +47,5 @@ class TestCase(unittest.TestCase):
 
     @staticmethod
     def kwargs_helper(base=None, **kwargs):
-        obj_props = {k: v for k, v in vars(base).items() if not k.startswith("_")}
         kwargs = {**kwargs, **{k: v for k, v in vars(base).items() if not k.startswith("_")}}
         return KwargsHelper(**kwargs)
