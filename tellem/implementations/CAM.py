@@ -116,7 +116,7 @@ class GradCAM(ImplementationBase):
         self.activations = None
         self.grad = None
 
-    def get_gradcam(self, x: Tensor, y: Tensor) -> Tensor:
+    def get_gradcam(self, x: Tensor, y: Tensor, **kwargs) -> Tensor:
 
         preds = self.model(x)
 
@@ -138,7 +138,7 @@ class GradCAM(ImplementationBase):
             cam_vals = cam_vals.sum(dim=0)
         return cam_vals
 
-    def use_layer(self, conv_layer: str):
+    def use_layer(self, conv_layer: str, **kwargs):
         def gradient_hook(grad):
             self.grad = grad
 
@@ -147,3 +147,10 @@ class GradCAM(ImplementationBase):
             self.activations = outputs
 
         self.capture[conv_layer] = Capture(self.model, conv_layer).capture_activations(activation_hook)
+
+    @classmethod
+    def __tellem_function__(cls, args):
+        grad_cam = cls(args.model, args.loss_func)
+        kwargs = args.kwargs
+        grad_cam.use_layer(**kwargs)
+        return grad_cam.get_gradcam(**kwargs)
