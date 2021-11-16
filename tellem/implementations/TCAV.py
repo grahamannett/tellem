@@ -32,10 +32,18 @@ class TCAV(ImplementationBase):
         non_concepts = ...tensor of random examples ...
     """
 
-    def __init__(self, model: Model):
-        super().__init__()
+    def __init__(
+        self,
+        model: Model = None,
+        linear_model_base=SGDClassifier(loss="hinge", eta0=1, learning_rate="constant", penalty=None),
+        *args,
+        **kwargs
+    ):
+        super().__init__(model=model, *args, **kwargs)
         self.model = model
         self.cav = {}
+
+        self.LinearModel = lambda: linear_model_base
 
     def capture_layers(self, *layers):
         """intermediate layers, they call them bottlenecks"""
@@ -68,7 +76,7 @@ class TCAV(ImplementationBase):
             # for each layer we are 'testing' we get the activations and train a linear classifier, then save the CAV
             activations = self.capture[layer].activations
             activations = activations.reshape(len(activations), -1).detach().numpy()
-            linear_model = SGDClassifier(loss="hinge", eta0=1, learning_rate="constant", penalty=None)
+            linear_model = self.LinearModel()
 
             linear_model.fit(activations, y_train)
             self.cav[layer] = linear_model.coef_.reshape(-1)

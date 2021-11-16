@@ -7,6 +7,8 @@ import copy
 
 from typing import Callable, Dict, List
 
+from tellem.engine.torch import CaptureManager
+
 
 class TrainerHelper:
     def __init__(self, model: nn.Module, dataloaders: Dict[str, torch.utils.data.DataLoader], device: str = None) -> None:
@@ -142,24 +144,17 @@ class TrainerHelper:
 
         self.callbacks.append(callback)
 
-    def attach_capture_manager(self, capture_manager: CaptureManager) -> None:
+    def attach_capture_manager(self, capture_manager: "CaptureManager") -> None:
         self.capture_manager = capture_manager
 
     def post_val_step(self, *args, **kwargs):
         pass
 
 
-class CaptureManager:
-    def __init__(self, module) -> None:
-        self.module = module
-
-    def attach(self, *args, **kwargs):
-        pass
-
-
 class Callback:
-    trainer_ref: TrainerHelper = None
-    capture_ref: CaptureManager = None
+    def __init__(self, trainer_ref: TrainerHelper = None, capture_ref: CaptureManager = None) -> None:
+        self.trainer_ref = None
+        self.capture_ref = None
 
     def emit(self, *args, **kwargs):
         pass

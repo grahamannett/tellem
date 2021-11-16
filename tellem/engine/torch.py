@@ -7,10 +7,32 @@ from torch import nn
 from tellem.types import RemovableHandle, Tensor
 
 
+class CaptureManager:
+    def __init__(self) -> None:
+        self._capture = {}
+
+    def __getitem__(self, key):
+        return self._capture[key]
+
+    def __setitem__(self, key, value):
+        self._capture[key] = value
+
+    def attach(self, *args, **kwargs):
+        pass
+
+    def detach(self):
+        for key in self._capture.keys():
+            self._capture[key] = None
+
+
 class Capture:
+    """capture a layer/module of a model.  either activations or gradients"""
+
     def __init__(self, model: nn.Module, layer: str):
         self.model = model
         self.layer = layer
+
+        self.module = None
         self._activations = False
         self._gradients = False
 
@@ -18,6 +40,7 @@ class Capture:
         self.gradients = None
 
         self.hooks = []
+        self.removed_hooks = []
 
     @singledispatchmethod
     def get_layer(self, layer):
