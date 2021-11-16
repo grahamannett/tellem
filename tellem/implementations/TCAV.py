@@ -82,7 +82,7 @@ class TCAV(ImplementationBase):
             self.cav[layer] = linear_model.coef_.reshape(-1)
 
     def compute_tcav(self, x: Tensor, y: Tensor, **kwargs):
-        """[summary]
+        """testing of concept activation vector is a score => |(x in X_k : S_{C,k,l}(x) > 0)| / |X_k|
         Args:
             concepts (Tensor): concepts we are testing the CAV for
             y_concepts (Tensor): labels
