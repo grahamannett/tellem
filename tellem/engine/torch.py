@@ -63,7 +63,6 @@ class Capture:
         self.remove()
 
 
-# MORE ADVANCED BELOW
 class CaptureHandler:
     """base class for capturing intermediate values from pytorch model"""
 
@@ -93,6 +92,3 @@ class CaptureGradientsHandler(CaptureHandler):
     def __init__(self, module: nn.Module, keep_input: bool = True, keep_output: bool = True):
         super().__init__(module, keep_output=keep_output)
         self.handle = module.register_backward_hook(self)
-
-    # def capture_gradients_of_activations(self):
-    #     self.gradients = self.activations.output.register_hook()

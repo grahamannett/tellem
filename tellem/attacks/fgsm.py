@@ -1,18 +1,34 @@
 from typing import Any, Callable
 
+import torch
+
 from tellem.implementations import ImplementationBase
 from tellem.types import Model, Tensor
 
 
 class FastGradientSignMethod(ImplementationBase):
-    def __init__(self, model: Model = None, loss_func: Callable[..., Any] = None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, model: Model = None, loss_func: Callable[..., Any] = None, eps: float = 0.01, *args, **kwargs):
+        super().__init__(model=model, *args, **kwargs)
         self.loss_func = loss_func
+        self.eps = eps
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return super().__call__(*args, **kwds)
 
     def generate_attack(self, x: Tensor, y: Tensor, **kwargs):
+        y_pred = self.model(x)
+
+        loss = self.loss_func(y_pred, y)
+        self.model.zero_grad()
+        loss.backward()
+
+        x_grad = x.grad.data
+        sign_x_grad = x_grad.sign()
+
+        perturbed_x = x + self.eps * sign_x_grad
+        return perturbed_x
+
+    def test_attack(self, x, y):
         pass
 
     def __tellem_function__(self, *args, **kwargs):

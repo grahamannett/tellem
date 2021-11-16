@@ -4,6 +4,14 @@ import torch.nn.functional as F
 from torchvision import datasets, models, transforms
 
 
+class DataFixture:
+    pass
+
+
+class ModelFixture:
+    pass
+
+
 class ConvNet(nn.Module):
     def __init__(self):
         super(ConvNet, self).__init__()
@@ -35,12 +43,15 @@ class ConvNet(nn.Module):
         return output
 
 
-class DataFixture:
-    pass
+class _MNISTFixture(DataFixture):
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
 
+    train_dataset = datasets.MNIST("tmp/", train=True, download=True, transform=transform)
+    test_dataset = datasets.MNIST("tmp/", train=False, transform=transform)
 
-class ModelFixture:
-    pass
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+    x, y = next(iter(train_loader))
 
 
 class _Cifar10Fixture(DataFixture):

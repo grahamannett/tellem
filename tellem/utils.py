@@ -26,3 +26,7 @@ def upsample_to_image(image: Tensor, overlay: Tensor) -> Image:
     image, overlay = to_pil(image), to_pil(overlay)
     overlay = overlay.resize(image.size)
     return overlay
+
+
+def clamp_image(x: Tensor, min: float = 0.0, max: float = 1.0) -> Tensor:
+    return torch.clamp(x, min, max)
