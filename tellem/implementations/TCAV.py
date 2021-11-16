@@ -26,7 +26,7 @@ class TCAV(ImplementationBase):
         tcav = TCAV(model)
         tcav.capture_layers("relu1", "conv2")
         tcav.train_cav(concepts, non_concepts)
-        tcav_scores = tcav.test_tcav()
+        tcav_scores = tcav.compute_tcav(concepts, non_concepts)
 
         concepts = ...dataloader or tensor of input data for striped images...
         non_concepts = ...tensor of random examples ...
@@ -50,7 +50,7 @@ class TCAV(ImplementationBase):
 
         self.cav = {layer: None for layer in layers}
 
-    def train_cav(self, concepts, non_concepts):
+    def train_cav(self, concepts: Tensor, non_concepts: Tensor):
         # create the training labels for the linear model
         y_train = torch.stack([torch.ones(len(concepts)), torch.zeros(len(non_concepts))]).reshape(-1)
 
@@ -66,30 +66,32 @@ class TCAV(ImplementationBase):
             linear_model.fit(activations, y_train)
             self.cav[layer] = linear_model.coef_.reshape(-1)
 
-    def compute_tcav(self, concepts, non_concepts, y_concepts, y_non_concepts):
+    def compute_tcav(self, x: Tensor, y: Tensor, **kwargs):
         """[summary]
         TODO: the tcav score is actually like |(x in X_k : S_{C,k,l}(x) > 0)| / |X_k|
         Args:
             concepts ([type]): [description]
-            non_concepts ([type]): [description]
             y_concepts ([type]): [description]
-            y_non_concepts ([type]): [description]
 
         Returns:
             [type]: [description]
         """
-        y = torch.vstack([y_concepts, y_non_concepts])
-        preds = self.model(torch.cat((concepts, non_concepts), 0))
+
+        preds = self.model(x)
 
         for layer in self.capture.keys():
             self.capture[layer].capture_gradients()
 
         preds.backward(y)
 
-        tcav_scores = {}
+        cav_sensitivity_scores = {}
         for layer in self.capture.keys():
             grad = self.capture[layer].grad
             grad = grad.reshape(len(grad), -1)
-            tcav_scores[layer] = grad @ self.cav[layer]
+            cav_sensitivity_scores[layer] = grad @ self.cav[layer]
+
+        tcav_scores = {}
+        for layer, scores in cav_sensitivity_scores.items():
+            tcav_scores[layer] = sum(scores > 0).item() / len(scores)
 
         return tcav_scores

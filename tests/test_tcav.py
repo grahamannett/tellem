@@ -80,6 +80,6 @@ class TestTCAV(TestCase):
         y_concepts = F.one_hot(self.y)
         y_non_concepts = torch.zeros_like(y_concepts)
 
-        tcav_scores = tcav.compute_tcav(concepts, non_concepts, y_concepts, y_non_concepts)
+        tcav_scores = tcav.compute_tcav(concepts, y_concepts)
 
         self.assertNotEqual(tcav_scores, {})
