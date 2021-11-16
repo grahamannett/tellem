@@ -81,5 +81,9 @@ class TestTCAV(TestCase):
         y_non_concepts = torch.zeros_like(y_concepts)
 
         tcav_scores = tcav.compute_tcav(concepts, y_concepts)
+        self.assertNotEqual(tcav_scores, {})
 
+        # test with no non-concepts (i.e. image data)
+        tcav.train_cav(concepts)
+        tcav_scores = tcav.compute_tcav(concepts, y_concepts)
         self.assertNotEqual(tcav_scores, {})
