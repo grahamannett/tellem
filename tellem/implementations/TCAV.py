@@ -30,9 +30,6 @@ class TCAV(ImplementationBase):
 
         concepts = ...dataloader or tensor of input data for striped images...
         non_concepts = ...tensor of random examples ...
-
-        tcav.train_cav(concepts, non_concepts)
-
     """
 
     def __init__(self, model: Model):
@@ -50,8 +47,18 @@ class TCAV(ImplementationBase):
 
         self.cav = {layer: None for layer in layers}
 
-    def train_cav(self, concepts: Tensor, non_concepts: Tensor):
+    def train_cav(self, concepts: Tensor, non_concepts: Tensor = None):
+        """generate the CAV for a layer based on concepts and non-concepts
+
+        Args:
+            concepts (Tensor): input data containing a concept
+            non_concepts (Tensor): data that is not concept
+        """
         # create the training labels for the linear model
+
+        if non_concepts is None:
+            non_concepts = torch.rand_like(concepts)
+
         y_train = torch.stack([torch.ones(len(concepts)), torch.zeros(len(non_concepts))]).reshape(-1)
 
         # concat the concepts and not so we can generate the activations together
@@ -68,13 +75,12 @@ class TCAV(ImplementationBase):
 
     def compute_tcav(self, x: Tensor, y: Tensor, **kwargs):
         """[summary]
-        TODO: the tcav score is actually like |(x in X_k : S_{C,k,l}(x) > 0)| / |X_k|
         Args:
-            concepts ([type]): [description]
-            y_concepts ([type]): [description]
+            concepts (Tensor): concepts we are testing the CAV for
+            y_concepts (Tensor): labels
 
         Returns:
-            [type]: [description]
+            Dict[layer, score]: sensitivity of score to layer
         """
 
         preds = self.model(x)
