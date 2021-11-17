@@ -90,7 +90,7 @@ class TCAV(ImplementationBase):
             y_concepts (Tensor): labels
 
         Returns:
-            Dict[layer, score]: sensitivity of score to layer
+            Dict[str, float]: sensitivity of score to layer
         """
 
         preds = self.model(x)
