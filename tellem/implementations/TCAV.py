@@ -4,7 +4,7 @@ import torch
 from sklearn import linear_model
 from sklearn.linear_model import SGDClassifier
 
-from tellem import Capture
+from tellem import Capture, uses_backend
 from tellem.implementations.base import ImplementationBase
 from tellem.types import Model, Tensor
 
@@ -57,6 +57,7 @@ class TCAV(ImplementationBase):
 
         self.cav = {layer: None for layer in layers}
 
+    @uses_backend(torch)
     def train_cav(self, concepts: Tensor, non_concepts: Tensor = None):
         """generate the CAV for a layer based on concepts and non-concepts
 
