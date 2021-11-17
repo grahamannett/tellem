@@ -1,7 +1,7 @@
 import unittest
 from functools import singledispatchmethod
 
-from tests.common.fixtures import DataFixture, ModelFixture
+from tellem.testing.fixtures import DataFixture, ModelFixture
 
 
 class KwargsHelper:

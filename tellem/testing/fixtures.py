@@ -4,6 +4,9 @@ import torch.nn.functional as F
 from torchvision import datasets, models, transforms
 
 
+_USES_TORCH = True
+
+
 class DataFixture:
     pass
 
@@ -13,12 +16,10 @@ class ModelFixture:
 
 
 class ConvNet(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels: int = 1):
         super(ConvNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        self.conv1 = nn.Conv2d(in_channels, 32, 3, 1)
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        # self.dropout1 = nn.Dropout(0.25)
-        # self.dropout2 = nn.Dropout(0.5)
         self.fc1 = nn.Linear(9216, 128)
         self.fc2 = nn.Linear(128, 10)
         self.max_pool2d = nn.MaxPool2d(2)
@@ -32,8 +33,6 @@ class ConvNet(nn.Module):
     def forward(self, x):
         x = self.relu1(self.conv1(x))
         x = self.relu2(self.conv2(x))
-        # x = F.max_pool2d(x, 2)
-        # x = torch.flatten(x, 1)
         x = self.max_pool2d(x)
         x = self.flatten(x)
         x = self.relu3(self.fc1(x))

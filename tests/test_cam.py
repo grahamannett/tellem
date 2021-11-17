@@ -1,7 +1,7 @@
 import torch.nn.functional as F
 
 from tellem.implementations import CAM, GradCAM
-from tests.common import Cifar10Fixture, ResNetFixture, TestCase
+from tellem.testing import Cifar10Fixture, ResNetFixture, TestCase
 
 
 class TestCAM(TestCase):

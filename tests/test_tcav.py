@@ -5,13 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 
-# need to fix this import type
-
 from tellem.implementations import TCAV
-from tests.common import TestCase
-from tests.common.fixtures import ResNetFixture
-
-import pytest
+from tellem.testing import ResNetFixture, TestCase
 
 
 class Net(nn.Module):

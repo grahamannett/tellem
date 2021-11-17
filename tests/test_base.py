@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from tellem.implementations import ImplementationBase
 
-from tests.common import TestCase
+from tellem.testing import TestCase
 
 _USES_TORCH = True
 
