@@ -1,3 +1,5 @@
+from typing import Dict
+
 import torch
 from sklearn import linear_model
 from sklearn.linear_model import SGDClassifier
@@ -81,7 +83,7 @@ class TCAV(ImplementationBase):
             linear_model.fit(activations, y_train)
             self.cav[layer] = linear_model.coef_.reshape(-1)
 
-    def compute_tcav(self, x: Tensor, y: Tensor, **kwargs):
+    def compute_tcav(self, x: Tensor, y: Tensor, **kwargs) -> Dict[str, float]:
         """testing of concept activation vector is a score => |(x in X_k : S_{C,k,l}(x) > 0)| / |X_k|
         Args:
             concepts (Tensor): concepts we are testing the CAV for
