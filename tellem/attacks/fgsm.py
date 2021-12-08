@@ -12,12 +12,15 @@ class FastGradientSignMethod(ImplementationBase):
         self.loss_func = loss_func
         self.eps = eps
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        return super().__call__(*args, **kwds)
+    def __call__(self, x: Tensor, y: Tensor = None, *args: Any, **kwds: Any) -> Any:
+        return self.generate_attack(x, y)
 
-    def generate_attack(self, x: Tensor, y: Tensor, **kwargs):
+    def generate_attack(self, x: Tensor, y: Tensor = None, **kwargs):
         y_pred = self.model(x)
 
+        y = y_pred if y is None else y
+
+        # breakpoint()
         loss = self.loss_func(y_pred, y)
         self.model.zero_grad()
         loss.backward()

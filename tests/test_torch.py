@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 
-from tellem.backend.torch import Capture
+from tellem.engine.torch import Capture
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

@@ -1,7 +1,7 @@
 from typing import Any, Callable, List
 
 from tellem import Capture
-from tellem.implementations.base import ImplementationBase
+from tellem.implementations import ImplementationBase
 from tellem.types import ConvLayer, LinearLayer, Model, Tensor
 
 
@@ -21,12 +21,41 @@ class CAM(ImplementationBase):
 
     Useage:
         model = Model()
+        model.use_layer(layer)
+        model.get_cam(x, y)
     """
 
     def __init__(self, model: Model = None, *args, **kwargs):
         super().__init__(model=model, *args, **kwargs)
         self.capture = {}
         self.check_model()
+
+
+    def check_model(self) -> None:
+        # conv feature maps → global average pooling → softmax layer
+        modules = list(self.model.named_modules())
+        last_linear_layer = None
+        last_conv_layer = None
+        for idx, (_, layer_obj) in enumerate(modules):
+            if isinstance(layer_obj, ConvLayer):
+                last_conv_layer = idx
+            if isinstance(layer_obj, LinearLayer):
+                last_linear_layer = idx
+
+        if last_conv_layer < last_linear_layer:
+            return
+
+        raise TypeError("Linear Layer Must Follow Conv")
+
+
+    def use_layer(self, conv_layer: str = None, fc_layer: str = None, **kwargs) -> None:
+        def activation_hook(module, inputs, outputs):
+            self.activations = outputs
+
+        self.capture[conv_layer] = Capture(self.model, conv_layer).capture_activations(activation_hook)
+
+        layer_obj = getattr(self.model, fc_layer)
+        self.weights = layer_obj.weight
 
     def get_cam(self, x: Tensor, y: Tensor, **kwargs):
         _ = self.model(x)
@@ -49,30 +78,6 @@ class CAM(ImplementationBase):
 
         return cam_vals
 
-    def check_model(self):
-        # conv feature maps → global average pooling → softmax layer
-        modules = list(self.model.named_modules())
-        last_linear_layer = None
-        last_conv_layer = None
-        for idx, (_, layer_obj) in enumerate(modules):
-            if isinstance(layer_obj, ConvLayer):
-                last_conv_layer = idx
-            if isinstance(layer_obj, LinearLayer):
-                last_linear_layer = idx
-
-        if last_conv_layer < last_linear_layer:
-            return
-
-        raise TypeError("Linear Layer Must Follow Conv")
-
-    def use_layer(self, conv_layer: str = None, fc_layer: str = None, **kwargs):
-        def activation_hook(module, inputs, outputs):
-            self.activations = outputs
-
-        self.capture[conv_layer] = Capture(self.model, conv_layer).capture_activations(activation_hook)
-
-        layer_obj = getattr(self.model, fc_layer)
-        self.weights = layer_obj.weight
 
     @classmethod
     def __tellem_function__(cls, args):

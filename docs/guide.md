@@ -92,3 +92,16 @@ def __tellem_function__(cls, args):
 ```
 
 This method shows how to explicitly use the method and allows our testing framework to automatically test the class with minimal more overhead.
+
+
+
+
+<!-- # Implementing Tests -->
+
+
+<!-- # Implementing an attack
+
+
+The first part of implementing a
+ -->
+

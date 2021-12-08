@@ -3,14 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, models, transforms
 
+from dataclasses import dataclass
 
 _USES_TORCH = True
 
 
+@dataclass
 class DataFixture:
     pass
 
 
+@dataclass
 class ModelFixture:
     pass
 
@@ -66,8 +69,16 @@ class _Cifar10Fixture(DataFixture):
     x, y = next(iter(train_loader))
 
 
+@dataclass
 class _ResNetFixture(ModelFixture):
     model = models.resnet18(pretrained=True)
+    # num_classes: int = None
+
+    def fix_output(self, num_classes: int):
+
+        # if self.num_classes is not None:
+        num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Linear(num_ftrs, num_classes)
 
 
 Cifar10Fixture = _Cifar10Fixture()
