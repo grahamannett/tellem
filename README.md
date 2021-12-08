@@ -36,12 +36,13 @@ from there an example of how to use it would be
 python examples/tcav_example.py
 ```
 
-for examples of how to implement a new method check out `docs/guide.md`
+for examples of how to implement a new method check out [docs/guide](docs/guide.md)
 
 To run the tests run
 
 ```
 pytest tests/
+```
 
 
 # Notes on Testing Related
