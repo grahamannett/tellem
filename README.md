@@ -19,6 +19,31 @@ Also another big focus on making it clear and usable is to have tests that are l
 - webserver to display some of these!
 
 
+# Usage
+
+to install and use, download or clone the repository and then cd into the directory and run pip install:
+
+```
+
+git clone git@github.com:grahamannett/tellem.git
+cd tellem/
+pip install -e .
+```
+
+from there an example of how to use it would be
+
+```
+python examples/tcav_example.py
+```
+
+for examples of how to implement a new method check out `docs/guide.md`
+
+To run the tests run
+
+```
+pytest tests/
+
+
 # Notes on Testing Related
 - I started using unittest but then looked at moving over to pytest as I know a lot of people recommend.  Im somewhat interested in moving stuff from [setup_methods](https://docs.pytest.org/en/latest/how-to/xunit_setup.html#method-and-function-level-setup-teardown) these methods to [pytest fixtures](https://docs.pytest.org/en/latest/how-to/fixtures.html#how-to-fixtures) but also want to make it as simplistic and obvious as possible to make a way to test the explainability method
 
