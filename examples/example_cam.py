@@ -24,8 +24,6 @@ class Net(nn.Module):
     def forward(self, x: torch.Tensor):
         x = self.pool1(F.relu(self.conv1(x)))
         x = self.pool2(F.relu(self.conv2(x)))
-        # x
-        breakpoint()
         # x = torch.flatten(x, 1)  # flatten all dimensions except batch
         x = self.fc(x)
         return x
