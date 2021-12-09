@@ -30,11 +30,11 @@ cd tellem/
 pip install -e .
 ```
 
-from there an example of how to use it would be
+<!-- from there an example of how to use it would be -->
 
-```
-python examples/tcav_example.py
-```
+<!-- ```
+python examples/example_tcav.py
+``` -->
 
 for examples of how to implement a new method check out [docs/guide](docs/guide.md)
 
