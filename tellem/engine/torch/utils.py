@@ -1,45 +1,73 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
+
+from typing import Callable, Callback, List
 
 
-import copy
+class Callback:
+    trainer_ref: "TrainerHelper" = None
 
-from typing import Callable, Dict, List
+    # def __init__(self):
+    #     pass
+    #     self.trainer_ref = None
+    #     self.capture_ref = None
 
-from tellem.engine.torch import CaptureManager
+    @property
+    def trainer(self):
+        return self.trainer_ref
+
+    @trainer.setter
+    def trainer(self, trainer_ref: "TrainerHelper"):
+        self.trainer_ref = trainer_ref
+
+    @property
+    def capture_manager(self):
+        return self.capture_ref
+
+    @capture_manager.setter
+    def capture_manager(self, capture_ref: "Capture"):
+        self.capture_ref = capture_ref
 
 
 class TrainerHelper:
-    def __init__(self, model: nn.Module, dataloaders: Dict[str, torch.utils.data.DataLoader], device: str = None) -> None:
-        super().__init__()
+    """Since pytorch doesnt have anything like the keras equivalent model.fit()
+    this is what should be similar.  Has a
+    """
 
-        self._device = device if device is not None else "cpu"
+    def __init__(
+        self,
+        model: nn.Module,
+        trainloader: torch.utils.data.DataLoader,
+        testloader: torch.utils.data.DataLoader,
+        loss_func: Callable[..., torch.Tensor],
+        optimizer: torch.optim.Optimizer,
+        device: str = None,
+    ) -> None:
         self.model = model
-        self.model.share_memory()
+        self.trainloader = trainloader
+        self.testloader = testloader
 
-        self.model = self.model.to(self._device)
+        self.dataset_sizes = {phase: len(dataloader.dataset) for phase, dataloader in (("train", self.trainloader), ("test", self.testloader))}
 
-        self.dataloaders = dataloaders
-        self.dataset_sizes = {phase: len(dataloader_.dataset) for phase, dataloader_ in dataloaders.items()}
+        self.loss_func = loss_func
+        self.optimizer = optimizer
 
-        #
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.0001)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=7, gamma=0.1)
+        self._capture_manager = None
 
-        self.best_model_wts = copy.deepcopy(self.model.state_dict())
-        self.best_acc = 0.0
-
-        self.capture_manager = None
-        self.stop_early = False
+        self.perturb_helper = None
 
         self.callbacks: List[Callback] = []
-        self.clear_running_vals()
+        self.stop_early = False
 
-    def _emit(self, step):
-        for callback in self.callbacks:
-            callback.emit()
+        self.device = None
+
+    @property
+    def capture(self):
+        return self._capture_manager
+
+    @capture.setter
+    def _(self, capture_manager):
+        self._capture_manager = capture_manager
 
     def clear_running_vals(self):
         self.running_loss = 0.0
@@ -62,8 +90,8 @@ class TrainerHelper:
         self.model.train()
         self.clear_running_vals()
         for inputs, labels in self.dataloaders[step]:
-            inputs = inputs.to(self._device)
-            labels = labels.to(self._device)
+            inputs = inputs.to(self.model.device)
+            labels = labels.to(self.model.device)
 
             self.optimizer.zero_grad()
 
@@ -90,8 +118,8 @@ class TrainerHelper:
 
         # batches of val data
         for inputs, labels in self.dataloaders[step]:
-            inputs = inputs.to(self._device)
-            labels = labels.to(self._device)
+            inputs = inputs.to(self.model.device)
+            labels = labels.to(self.model.device)
 
             self.optimizer.zero_grad()
 
@@ -128,6 +156,8 @@ class TrainerHelper:
             self.val_step()
 
             # await
+            # asyncio.run(self.capture_manager.update(epoch=epoch))
+            # asyncio.run(self.capture_manager.update(epoch=epoch))
             self.capture_manager.update(epoch=epoch)
 
             for callback in self.callbacks:
@@ -137,40 +167,15 @@ class TrainerHelper:
             if self.stop_early:
                 break
 
-    def attach_callback(self, callback: Callback) -> None:
+    def attach_callback(self, callback: "Callback") -> None:
         callback.trainer = self
         # callback.set_trainer(self)
         callback.capture_manager = self.capture_manager
 
         self.callbacks.append(callback)
 
-    def attach_capture_manager(self, capture_manager: "CaptureManager") -> None:
+    def attach_capture_manager(self, capture_manager: Capture) -> None:
         self.capture_manager = capture_manager
 
     def post_val_step(self, *args, **kwargs):
         pass
-
-
-class Callback:
-    def __init__(self, trainer_ref: TrainerHelper = None, capture_ref: CaptureManager = None) -> None:
-        self.trainer_ref = None
-        self.capture_ref = None
-
-    def emit(self, *args, **kwargs):
-        pass
-
-    @property
-    def trainer(self):
-        return self.trainer_ref
-
-    @trainer.setter
-    def trainer(self, trainer_ref: TrainerHelper):
-        self.trainer_ref = trainer_ref
-
-    @property
-    def capture_manager(self):
-        return self.capture_ref
-
-    @capture_manager.setter
-    def capture_manager(self, capture_ref: CaptureManager):
-        self.capture_ref = capture_ref

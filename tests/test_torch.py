@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 
-from tellem.engine.torch import Capture
+from tellem.engine.torch import Capture, CaptureManager
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -73,8 +73,10 @@ class TestCaptureManager(unittest.TestCase):
 
     def test_activations(self):
         x, _ = next(iter(self.train_loader))
-        self.capture_manager["conv1"] = Capture(self.model, "conv1")
-        self.capture_manager["relu1"] = Capture(self.model, "relu1")
+        self.capture_manager = CaptureManager(self.model)
+        self.capture_manager.capture_layer("conv1")
+        self.capture_manager["relu1"] = Capture(self.model, "relu1").capture_activations()
+
         activations, preds = self.capture_manager(x)
 
         self.assertEqual(activations["conv1"].shape, (64, 32, 26, 26))
