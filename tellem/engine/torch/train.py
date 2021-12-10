@@ -7,39 +7,58 @@ import copy
 
 from typing import Callable, Dict, List
 
-from tellem.engine.torch import CaptureManager
+
+from tellem.engine.torch.capture import CaptureManager
+from tellem.engine.torch.utils import Callback
 
 
 class TrainerHelper:
-    def __init__(self, model: nn.Module, dataloaders: Dict[str, torch.utils.data.DataLoader], device: str = None, optimizer: torch.optim.Optimizer=None, scheduler: torch.optim.lr_scheduler =None, **kwargs) -> None:
+    callbacks: List["Callback"] = []
+    capture_manager: CaptureManager = None
+
+    def __init__(
+        self,
+        model: nn.Module,
+        dataloaders: Dict[str, torch.utils.data.DataLoader],
+        optimizer: torch.optim.Optimizer = None,
+        criterion: torch.nn.modules.loss._Loss = None,
+        scheduler: torch.optim.lr_scheduler._LRScheduler = None,
+        device: str = None,
+        share_memory: bool = False,
+        **kwargs,
+    ) -> None:
         super().__init__()
 
-        self._device = device if device is not None else "cpu"
         self.model = model
-        self.model.share_memory()
-
-        self.model = self.model.to(self._device)
-
         self.dataloaders = dataloaders
         self.dataset_sizes = {phase: len(dataloader_.dataset) for phase, dataloader_ in dataloaders.items()}
 
-        #
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optimizer if optimizer not None else self._default_optimizer()
-        self.scheduler = optimizer if optimizer not None else self._default_optimizer()
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=7, gamma=0.1)
+        # defaults
+        self._device = device if device is not None else "cpu"
+        self.criterion = criterion if criterion is not None else self._default_criterion()
+        self.optimizer = optimizer if optimizer is not None else self._default_optimizer()
+        self.scheduler = scheduler if scheduler is not None else self._default_scheduler()
 
+        # post-defaults model setup
+        if share_memory:
+            self.model.share_memory()
+        self.model = self.model.to(self._device)
+
+        # tracking
         self.best_model_wts = copy.deepcopy(self.model.state_dict())
         self.best_acc = 0.0
-
-        self.capture_manager = None
         self.stop_early = False
 
-        self.callbacks: List[Callback] = []
         self.clear_running_vals()
+
+    def _default_criterion(self):
+        return nn.CrossEntropyLoss()
 
     def _default_optimizer(self):
         return optim.Adam(self.model.parameters(), lr=0.0001)
+
+    def _default_scheduler(self):
+        return optim.lr_scheduler.StepLR(self.optimizer, step_size=7, gamma=0.1)
 
     def _emit(self, step):
         for callback in self.callbacks:
@@ -120,15 +139,18 @@ class TrainerHelper:
             self.capture_manager.init
 
     def train(self, num_epochs: int) -> None:
+        print(f"DOING!")
         for epoch in range(num_epochs):
             print(f"{'EPOCH'.ljust(7)}==>{epoch}")
 
             # train related
-            self.capture_manager.detach()
+            if self.capture_manager:
+                self.capture_manager.detach()
             self.train_step()
 
             # val related
-            self.capture_manager.attach()
+            if self.capture_manager:
+                self.capture_manager.attach()
             self.val_step()
 
             # await
@@ -141,7 +163,10 @@ class TrainerHelper:
             if self.stop_early:
                 break
 
-    def attach_callback(self, callback: Callback) -> None:
+    def emit_step(self, step: str):
+        pass
+
+    def attach_callback(self, callback: "Callback") -> None:
         callback.trainer = self
         # callback.set_trainer(self)
         callback.capture_manager = self.capture_manager
@@ -153,28 +178,3 @@ class TrainerHelper:
 
     def post_val_step(self, *args, **kwargs):
         pass
-
-
-class Callback:
-    def __init__(self, trainer_ref: TrainerHelper = None, capture_ref: CaptureManager = None) -> None:
-        self.trainer_ref = None
-        self.capture_ref = None
-
-    def emit(self, *args, **kwargs):
-        pass
-
-    @property
-    def trainer(self):
-        return self.trainer_ref
-
-    @trainer.setter
-    def trainer(self, trainer_ref: TrainerHelper):
-        self.trainer_ref = trainer_ref
-
-    @property
-    def capture_manager(self):
-        return self.capture_ref
-
-    @capture_manager.setter
-    def capture_manager(self, capture_ref: CaptureManager):
-        self.capture_ref = capture_ref

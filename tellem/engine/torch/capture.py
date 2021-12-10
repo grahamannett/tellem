@@ -8,10 +8,6 @@ from torch import nn
 from tellem.types import Model, RemovableHandle, Tensor
 
 
-
-
-
-
 class Capture:
     """capture a layer/module of a model.  either activations or gradients"""
 
@@ -41,15 +37,11 @@ class Capture:
     def _(self, layer: int):
         return list(self.model.named_children())[layer][1]
 
-    def _default_activations_hook(self, module, inputs, outputs):
-        self.activations = outputs
-
-    def _default_gradients_hook(self, grad):
-        self.grad = grad
-
     def capture_activations(self, hook: Callable[..., Any] = None):
         if hook is None:
-            hook = self._default_activations_hook
+
+            def hook(module, inputs, outputs):
+                self.activations = outputs
 
         self._activations = True
         module = dict(self.model.named_modules())[self.layer]
@@ -57,10 +49,21 @@ class Capture:
         return self
 
     def capture_gradients(self, hook: Callable[..., Any] = None):
+        """use this function to get gradients AFTER you have done something like model(x)
+
+        Args:
+            hook (Callable[..., Any], optional): [description]. Defaults to None.
+
+        Returns:
+            [type]: [description]
+        """
         if hook is None:
-            hook = self._default_gradients_hook
+
+            def hook(grad):
+                self.gradients = grad
 
         self._gradients = True
+        self.activations.requires_grad_(True)
         hook_ = self.activations.register_hook(hook)
         self.hooks.append(hook_)
         return self

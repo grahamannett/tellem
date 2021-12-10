@@ -4,8 +4,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
+from examples.example_tcav import load_data
 
 from tellem.engine.torch import Capture, CaptureManager
+from tellem.engine.torch.train import TrainerHelper
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -70,6 +72,29 @@ class TestCaptureManager(unittest.TestCase):
 
         self.assertIsNotNone(y)
         self.assertIsNotNone(outputs)
+
+    def test_trainer(self):
+        trainer = TrainerHelper(self.model, dataloaders={"train": self.train_loader, "test": self.test_loader})
+        trainer.train(1)
+
+    def test_capture(self):
+        def hook_fn(grad):
+            self.grad__ = grad
+
+        x, y = next(iter(self.train_loader))
+        capture = Capture(self.model, "conv1")
+
+        capture.capture_activations()
+        preds = self.model(x)
+        self.assertEqual(capture.activations.shape, (64, 32, 26, 26))
+
+        preds = self.model(x)
+        capture.capture_gradients()
+        loss = F.nll_loss(preds, y)
+        loss.backward()
+
+        grads = capture.gradients
+        self.assertEqual(capture.activations.shape, capture.gradients.shape)
 
     def test_activations(self):
         x, _ = next(iter(self.train_loader))
