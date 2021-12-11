@@ -12,6 +12,8 @@ class SimpleTaylorDecomposition(ImplementationBase):
 
     Args:
         ImplementationBase ([type]): [description]
+
+    TODO: finish
     """
 
     def __init__(self, model: Model = None, **kwargs):
@@ -30,6 +32,8 @@ class SimpleTaylorDecomposition(ImplementationBase):
 class LayerwiseRelevanceDecomposition(ImplementationBase):
     """https://arxiv.org/abs/1706.07979
     https://git.tu-berlin.de/gmontavon/lrp-tutorial
+
+    TODO: finish
     """
 
     def __init__(self, model: Model = None, **kwargs):
@@ -55,4 +59,3 @@ class SimpleLayerwiseRelevenceDecomposition(ImplementationBase):
     def __check_model__(self):
         pass
 
-    

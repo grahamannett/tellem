@@ -6,6 +6,7 @@ import typer
 from dataclasses import dataclass
 
 from tellem.implementations import TCAV
+from tellem.engine.torch import DataLoaders, TrainerHelper
 
 
 @dataclass
@@ -55,8 +56,8 @@ def load_data():
     train_dataset = torchvision.datasets.MNIST(root="data/", download=True, transform=train_transforms)
     test_dataset = torchvision.datasets.MNIST(root="data/", train=False, transform=test_transforms)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=2)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=2)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=128, shuffle=False)
     return DataHelper(train=train_loader, test=test_loader)
 
 
@@ -66,19 +67,24 @@ def main():
 
     net = CNN().to(device)
 
-    tcav = TCAV.TCAV(net)
-    tcav.use_layers()
-    # for epoch in range(0, 5):
-    #     net.train()
-    #     train_loss = 0.0
+    dataloaders = DataLoaders(train=data.train, val=data.test)
 
-    #     for x, y in data.train:
-    #         x, y = x.to(device), y.to(device)
+    trainer = TrainerHelper(net, dataloaders)
+    trainer.train(1)
 
-    # # define concepts/noise
+    tcav = TCAV(net)
+    tcav.capture_layers("conv1", "conv2")
 
-    # concepts = data.test.data[data.test.y == 1]
-    # non_concept = noise_like(concepts)
+    x, y = next(iter(data.test))
+
+    concepts = x[y == 0]
+    non_concepts = torch.randn(concepts.shape)
+
+    TCAV.train_cav(concepts, non_concepts)
+
+    x_, y_ = next(iter(data.test))
+
+    TCAV.compute_tcav(x_, y_)
 
 
 if __name__ == "__main__":

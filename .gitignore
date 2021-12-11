@@ -193,3 +193,4 @@ cython_debug/
 
 tmp/
 data/
+.vscode/settings.json
