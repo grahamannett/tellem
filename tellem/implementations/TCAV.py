@@ -42,9 +42,7 @@ class TCAV(ImplementationBase):
         **kwargs
     ):
         super().__init__(model=model, *args, **kwargs)
-        self.model = model
         self.cav = {}
-
         self.LinearModel = lambda: linear_model_base
 
     def capture_layers(self, *layers):
@@ -57,7 +55,7 @@ class TCAV(ImplementationBase):
 
         self.cav = {layer: None for layer in layers}
 
-    @uses_backend(torch)
+    # @uses_backend(torch)
     def train_cav(self, concepts: Tensor, non_concepts: Tensor = None):
         """generate the CAV for a layer based on concepts and non-concepts
 

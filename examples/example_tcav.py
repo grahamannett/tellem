@@ -70,21 +70,22 @@ def main():
     dataloaders = DataLoaders(train=data.train, val=data.test)
 
     trainer = TrainerHelper(net, dataloaders)
-    trainer.train(1)
+    # trainer.train(1)
 
-    tcav = TCAV(net)
-    tcav.capture_layers("conv1", "conv2")
+    iter_data = iter(data.test)
 
-    x, y = next(iter(data.test))
+    x, y = next(iter_data)
 
     concepts = x[y == 0]
     non_concepts = torch.randn(concepts.shape)
 
-    TCAV.train_cav(concepts, non_concepts)
+    tcav = TCAV(net)
+    tcav.capture_layers("conv1", "conv2")
+    tcav.train_cav(concepts, non_concepts)
 
-    x_, y_ = next(iter(data.test))
+    x_, y_ = next(iter_data)
 
-    TCAV.compute_tcav(x_, y_)
+    tcav_scores = tcav.compute_tcav(x_, y_)
 
 
 if __name__ == "__main__":
