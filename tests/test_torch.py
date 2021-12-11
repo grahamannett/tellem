@@ -73,8 +73,12 @@ class TestCaptureManager(unittest.TestCase):
         self.assertIsNotNone(y)
         self.assertIsNotNone(outputs)
 
+    def test_dataloader(self):
+        dataloaders = DataLoaders(train=self.train_loader, test=self.test_loader, val=self.test_loader)
+        assert dataloaders["test"] == dataloaders["val"]
+
     def test_trainer(self):
-        dataloaders = DataLoaders(train=self.train_loader, val=self.test_loader)
+        dataloaders = DataLoaders(train=self.train_loader, test=self.test_loader, val=self.test_loader)
         trainer = TrainerHelper(self.model, dataloaders=dataloaders)
         trainer.train(1)
 

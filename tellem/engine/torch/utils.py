@@ -1,7 +1,13 @@
 import torch
 import torch.nn as nn
 
-from typing import Callable, List
+from typing import Callable, List, TypedDict
+
+
+class DataLoaders(TypedDict):
+    train: torch.utils.data.DataLoader
+    val: torch.utils.data.DataLoader
+    test: torch.utils.data.DataLoader
 
 
 class Callback:

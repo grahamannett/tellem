@@ -5,17 +5,12 @@ import torch.optim as optim
 
 import copy
 
-from typing import Callable, Dict, List, TypedDict
+from typing import Callable, Dict, List
 from tellem.engine.torch import Capture
 
 
 from tellem.engine.torch.capture import CaptureManager
-from tellem.engine.torch.utils import Callback
-
-
-class DataLoaders(TypedDict):
-    train: torch.utils.data.DataLoader
-    val: torch.utils.data.DataLoader
+from tellem.engine.torch.utils import Callback, DataLoaders
 
 
 _EmitDefaults = {
