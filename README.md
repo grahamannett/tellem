@@ -23,11 +23,16 @@ Also another big focus on making it clear and usable is to have tests that are l
 
 to install and use, download or clone the repository and then cd into the directory and run pip install:
 
-```
-
+```sh
 git clone git@github.com:grahamannett/tellem.git
 cd tellem/
 pip install -e .
+```
+
+alternatively you can install without examples or tests:
+
+```sh
+pip install git+https://github.com/grahamannett/tellem.git
 ```
 
 <!-- from there an example of how to use it would be -->
