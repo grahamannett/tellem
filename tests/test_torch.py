@@ -7,7 +7,7 @@ from torchvision import datasets, transforms
 from examples.example_tcav import load_data
 
 from tellem.engine.torch import Capture, CaptureManager
-from tellem.engine.torch.train import TrainerHelper
+from tellem.engine.torch.train import TrainerHelper, DataLoaders
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -74,7 +74,8 @@ class TestCaptureManager(unittest.TestCase):
         self.assertIsNotNone(outputs)
 
     def test_trainer(self):
-        trainer = TrainerHelper(self.model, dataloaders={"train": self.train_loader, "test": self.test_loader})
+        dataloaders = DataLoaders(train=self.train_loader, val=self.test_loader)
+        trainer = TrainerHelper(self.model, dataloaders=dataloaders)
         trainer.train(1)
 
     def test_capture(self):

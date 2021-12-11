@@ -113,6 +113,12 @@ class CaptureManager:
         for key in self._capture.keys():
             self._capture[key] = None
 
+    def update(self, epoch: int):
+        pass
+
+    def batch_update(self, **kwargs):
+        pass
+
 
 class CaptureHandler:
     """base class for capturing intermediate values from pytorch model"""

@@ -5,11 +5,41 @@ import torch.optim as optim
 
 import copy
 
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, TypedDict
+from tellem.engine.torch import Capture
 
 
 from tellem.engine.torch.capture import CaptureManager
 from tellem.engine.torch.utils import Callback
+
+
+class DataLoaders(TypedDict):
+    train: torch.utils.data.DataLoader
+    val: torch.utils.data.DataLoader
+
+
+_EmitDefaults = {
+    "pre_train_step": [CaptureManager.detach],
+    "pre_val_step": [CaptureManager.attach],
+    "post_val_step": [CaptureManager.update],
+    "val_step_batch_update": [CaptureManager.batch_update],
+}
+
+
+class EmitInfo:
+    def __init__(self):
+        self.steps = _EmitDefaults
+        self._callback_ref = None
+        pass
+
+    def __getitem__(self, key):
+        return self.steps.get(key, None)
+
+    def __setitem__(self, key, val):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        pass
 
 
 class TrainerHelper:
@@ -19,7 +49,7 @@ class TrainerHelper:
     def __init__(
         self,
         model: nn.Module,
-        dataloaders: Dict[str, torch.utils.data.DataLoader],
+        dataloaders: DataLoaders,
         optimizer: torch.optim.Optimizer = None,
         criterion: torch.nn.modules.loss._Loss = None,
         scheduler: torch.optim.lr_scheduler._LRScheduler = None,
@@ -125,7 +155,7 @@ class TrainerHelper:
 
             self.batch_update_loss_and_corrects(loss, inputs, preds, labels)
 
-            self.capture_manager.batch_update(labels=labels.detach().cpu().numpy())
+            self.emit_info("batch_update")
 
         # after you are done with all the data for val
         if self.epoch_acc > self.best_acc:
@@ -136,25 +166,21 @@ class TrainerHelper:
 
     def train_init(self) -> None:
         if self.capture_manager:
-            self.capture_manager.init
+            self.capture_manager.init()
 
     def train(self, num_epochs: int) -> None:
-        print(f"DOING!")
+
         for epoch in range(num_epochs):
             print(f"{'EPOCH'.ljust(7)}==>{epoch}")
 
-            # train related
-            if self.capture_manager:
-                self.capture_manager.detach()
+            self.emit_info("pre_train_step")
             self.train_step()
+            self.emit_info("post_train_step")
 
             # val related
-            if self.capture_manager:
-                self.capture_manager.attach()
+            self.emit_info("pre_val_step")
             self.val_step()
-
-            # await
-            self.capture_manager.update(epoch=epoch)
+            self.emit_info("post_val_step")
 
             for callback in self.callbacks:
                 callback()
@@ -163,17 +189,16 @@ class TrainerHelper:
             if self.stop_early:
                 break
 
-    def emit_step(self, step: str):
+    def emit_info(self, step: str):
         pass
 
-    def attach_callback(self, callback: "Callback") -> None:
+    def attach_callback(self, callback: Callback) -> None:
         callback.trainer = self
-        # callback.set_trainer(self)
         callback.capture_manager = self.capture_manager
 
         self.callbacks.append(callback)
 
-    def attach_capture_manager(self, capture_manager: "CaptureManager") -> None:
+    def attach_capture_manager(self, capture_manager: CaptureManager) -> None:
         self.capture_manager = capture_manager
 
     def post_val_step(self, *args, **kwargs):
