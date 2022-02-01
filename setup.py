@@ -9,7 +9,8 @@ setup(
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),
     install_requires=[
         "numpy",
-        "torch",
         "pytest",
+        "torch",
+        "sklearn",
     ],
 )

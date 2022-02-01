@@ -1,3 +1,4 @@
+import dataclasses
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,23 +11,36 @@ _USES_TORCH = True
 
 @dataclass
 class DataFixture:
-    pass
+    def __post_init__(self):
+        if train_loader := getattr(self, "train_loader", None):
+            self.x, self.y = next(iter(train_loader))
 
 
 @dataclass
 class ModelFixture:
-    pass
+    model: nn.Module = dataclasses.field(default=None, init=False)
+    _default_out_features: int = None
+
+    def __post_init__(self):
+        pass
+
+    def fix_num_classes(self, num_classes: int):
+        last_layer = list(self.model.named_modules())[-1][1]
+        self._default_out_features = last_layer.out_features
+        last_layer.out_features = num_classes
+        return self
 
 
 class ConvNet(nn.Module):
-    def __init__(self, in_channels: int = 1):
+    def __init__(self, in_channels: int = 1, num_classes: int = 10):
         super(ConvNet, self).__init__()
         self.conv1 = nn.Conv2d(in_channels, 32, 3, 1)
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        self.fc1 = nn.Linear(9216, 128)
-        self.fc2 = nn.Linear(128, 10)
         self.max_pool2d = nn.MaxPool2d(2)
         self.flatten = nn.Flatten(1)
+
+        self.fc1 = nn.Linear(9216, 128)
+        self.fc2 = nn.Linear(128, num_classes)
 
         # explicitly define these layers for testing purposes
         self.relu1 = nn.ReLU()
@@ -69,17 +83,20 @@ class _Cifar10Fixture(DataFixture):
     x, y = next(iter(train_loader))
 
 
-@dataclass
 class _ResNetFixture(ModelFixture):
-    model = models.resnet18(pretrained=True)
-    # num_classes: int = None
+    num_classes: int = None
 
-    def fix_output(self, num_classes: int):
+    # def fix_output(self, num_classes: int):
 
-        # if self.num_classes is not None:
-        num_ftrs = self.model.fc.in_features
-        self.model.fc = nn.Linear(num_ftrs, num_classes)
+    #     # if self.num_classes is not None:
+    #     num_ftrs = self.model.fc.in_features
+    #     self.model.fc = nn.Linear(num_ftrs, num_classes)
 
 
+# Data
 Cifar10Fixture = _Cifar10Fixture()
-ResNetFixture = _ResNetFixture()
+MNISTFixture = _MNISTFixture()
+
+# Models
+ResNetFixture = ModelFixture(model=models.resnet18(pretrained=True))
+BasicConvNet = ModelFixture(model=ConvNet())

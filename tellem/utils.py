@@ -30,3 +30,23 @@ def upsample_to_image(image: Tensor, overlay: Tensor) -> Image:
 
 def clamp_image(x: Tensor, min: float = 0.0, max: float = 1.0) -> Tensor:
     return torch.clamp(x, min, max)
+
+
+class EasyDict:
+    """similar to EasyDict package
+
+    usage:
+
+    obj = EasyDict(val=val1, args={...args})
+    """
+
+    def __init__(self, **kwargs):
+        for key, val in kwargs.items():
+            self.__setattr__(key, val)
+
+    def __iter__(self):
+        for key, val in self.__dict__.items():
+            yield key, val
+
+    def __getitem__(self, key: str):
+        return self.__dict__[key]
