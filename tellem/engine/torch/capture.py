@@ -16,11 +16,15 @@ class Capture:
         self.layer = layer
 
         self.module = None
-        self._activations = False
-        self._gradients = False
+        self._capture_activations = False
+        self._capture_gradients = False
 
         self.activations = None
         self.gradients = None
+
+        # for holding the old values
+        self._activations = []
+        self._gradients = []
 
         self.hooks = []
         self.removed_hooks = []
@@ -41,9 +45,12 @@ class Capture:
         if hook is None:
 
             def hook(module, inputs, outputs):
-                self.activations = outputs
+                if self.activations is not None:
+                    self._activations.extend(self.activations)
 
-        self._activations = True
+                self.activations = outputs.detach()
+
+        self._capture_activations = True
         module = dict(self.model.named_modules())[self.layer]
         self.hooks.append(module.register_forward_hook(hook))
         return self
@@ -62,15 +69,25 @@ class Capture:
             def hook(grad):
                 self.gradients = grad
 
-        self._gradients = True
+        self._capture_gradients = True
         self.activations.requires_grad_(True)
         hook_ = self.activations.register_hook(hook)
         self.hooks.append(hook_)
         return self
 
     def remove(self):
-        for hook in self.hooks:
+        while self.hooks:
+            hook = self.hooks.pop()
             hook.remove()
+            self.removed_hooks.append(hook)
+        self._activations = []
+        self._gradients = []
+        self.activations = None
+        self.gradients = None
+
+    def gather(self):
+        self._activations.extend(self.activations)
+        return torch.stack(self._activations)
 
     def __del__(self):
         self.remove()
@@ -84,6 +101,12 @@ class CaptureManager:
     def __getitem__(self, key):
         return self._capture[key]
 
+    def __enter__(self):
+        self.attach()
+
+    def __exit__(self):
+        self.detach()
+
     @singledispatchmethod
     def __setitem__(self, key, value):
         raise NotImplementedError("Cant set this for CaptureManager")
@@ -92,6 +115,7 @@ class CaptureManager:
     def _(self, key: str, value: Capture):
         self._capture[key] = value
 
+    # not sure if i want this function
     def __call__(self, x: Tensor, **kwargs):
         preds = self.model(x)
 
@@ -106,11 +130,29 @@ class CaptureManager:
         capture = Capture(self.model, layer).capture_activations()
         self.__setitem__(layer, capture)
 
+    # @singledispatchmethod
+    # def capture_layers(self, layers):
+    #     raise NotImplementedError
+
+    # @capture_layers.register
+    # def _(self, layers: [])
+
+    def capture_layers_of_type(self, layers: Union[nn.Module, str, Tuple[nn.Module]]):
+        if isinstance(layers, (nn.Module, str)):
+            layers = tuple(layers)
+
+        for name, layer in self.model.named_children():
+            if isinstance(layer, layers):
+                self.capture_layer(name)
+
     def attach(self, *args, **kwargs):
-        pass
+        for key in self._capture.keys():
+            self.capture_layer(key)
 
     def detach(self):
-        for key in self._capture.keys():
+        for key, capture in self._capture.items():
+            if capture:
+                capture.remove()
             self._capture[key] = None
 
     def update(self, epoch: int):
