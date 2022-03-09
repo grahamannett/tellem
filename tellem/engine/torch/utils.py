@@ -4,10 +4,26 @@ import torch.nn as nn
 from typing import Callable, List, TypedDict
 
 
-class DataLoaders(TypedDict):
-    train: torch.utils.data.DataLoader
-    val: torch.utils.data.DataLoader
-    test: torch.utils.data.DataLoader
+class DataLoaders:
+    dataset_types = ["train", "val", "test"]
+
+    def __init__(
+        self,
+        train: torch.utils.data.DataLoader = None,
+        val: torch.utils.data.DataLoader = None,
+        test: torch.utils.data.DataLoader = None,
+    ):
+        self.train = train
+        self.val = val
+        self.test = test
+
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    @classmethod
+    def from_dataset(cls, **kwargs):
+        obj = {k: v for k, v in kwargs.items() if k in DataLoaders.dataset_types}
+        return cls(torch.utils.data.DataLoader())
 
 
 class Callback:

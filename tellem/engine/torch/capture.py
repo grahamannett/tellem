@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 from functools import singledispatchmethod
 from typing import Any, Callable, Dict, List, Tuple, Union
-from functools import singledispatchmethod
 
 import torch
 from torch import nn
@@ -41,7 +42,7 @@ class Capture:
     def _(self, layer: int):
         return list(self.model.named_children())[layer][1]
 
-    def capture_activations(self, hook: Callable[..., Any] = None):
+    def capture_activations(self, hook: Callable[..., Any] = None) -> Capture:
         if hook is None:
 
             def hook(module, inputs, outputs):
@@ -55,7 +56,7 @@ class Capture:
         self.hooks.append(module.register_forward_hook(hook))
         return self
 
-    def capture_gradients(self, hook: Callable[..., Any] = None):
+    def capture_gradients(self, hook: Callable[..., Any] = None) -> Capture:
         """use this function to get gradients AFTER you have done something like model(x)
 
         Args:
@@ -85,7 +86,7 @@ class Capture:
         self.activations = None
         self.gradients = None
 
-    def gather(self):
+    def gather(self) -> torch.Tensor:
         self._activations.extend(self.activations)
         return torch.stack(self._activations)
 
@@ -94,17 +95,20 @@ class Capture:
 
 
 class CaptureManager:
-    def __init__(self, model: Model) -> None:
+    def __init__(self, model: Model, start_attached: bool = False) -> None:
         self.model = model
-        self._capture = {}
+        self.captures = {}
+
+        self._start_attached = start_attached
 
     def __getitem__(self, key):
-        return self._capture[key]
+        return self.captures[key]
 
     def __enter__(self):
         self.attach()
+        return self
 
-    def __exit__(self):
+    def __exit__(self, exception_type, exception_value, traceback):
         self.detach()
 
     @singledispatchmethod
@@ -113,7 +117,7 @@ class CaptureManager:
 
     @__setitem__.register
     def _(self, key: str, value: Capture):
-        self._capture[key] = value
+        self.captures[key] = value
 
     # not sure if i want this function
     def __call__(self, x: Tensor, **kwargs):
@@ -121,39 +125,42 @@ class CaptureManager:
 
         activations = {}
 
-        for key, capture in self._capture.items():
+        for key, capture in self.captures.items():
             activations[key] = getattr(capture, "activations")
 
         return activations, preds
 
-    def capture_layer(self, layer: str):
-        capture = Capture(self.model, layer).capture_activations()
+    def capture_layer(self, layer: str, attach: bool = True) -> CaptureManager:
+        capture = Capture(self.model, layer)
+
+        if attach:
+            capture.capture_activations()
         self.__setitem__(layer, capture)
+        return self
 
-    # @singledispatchmethod
-    # def capture_layers(self, layers):
-    #     raise NotImplementedError
-
-    # @capture_layers.register
-    # def _(self, layers: [])
-
-    def capture_layers_of_type(self, layers: Union[nn.Module, str, Tuple[nn.Module]]):
+    def capture_layers_of_type(self, layers: Union[nn.Module, str, Tuple[nn.Module]]) -> CaptureManager:
         if isinstance(layers, (nn.Module, str)):
             layers = tuple(layers)
 
-        for name, layer in self.model.named_children():
+        for name, layer in self.model.named_modules():
             if isinstance(layer, layers):
-                self.capture_layer(name)
+                self.capture_layer(name, attach=self._start_attached)
 
-    def attach(self, *args, **kwargs):
-        for key in self._capture.keys():
+        return self
+
+    def attach(self, *args, **kwargs) -> CaptureManager:
+        for key in self.captures.keys():
             self.capture_layer(key)
 
-    def detach(self):
-        for key, capture in self._capture.items():
+        return self
+
+    def detach(self) -> CaptureManager:
+        for key, capture in self.captures.items():
             if capture:
                 capture.remove()
-            self._capture[key] = None
+            self.captures[key] = None
+
+        return self
 
     def update(self, epoch: int):
         pass
