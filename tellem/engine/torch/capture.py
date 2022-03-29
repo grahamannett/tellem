@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatchmethod
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Sequence, Tuple, Union
 
 import torch
 from torch import nn
@@ -138,15 +138,18 @@ class CaptureManager:
         self.__setitem__(layer, capture)
         return self
 
-    def capture_layers_of_type(self, layers: Union[nn.Module, str, Tuple[nn.Module]]) -> CaptureManager:
-        if isinstance(layers, (nn.Module, str)):
-            layers = tuple(layers)
-
+    def capture(self, layer_types: List[torch.nn.Module] = None) -> CaptureManager:
         for name, layer in self.model.named_modules():
-            if isinstance(layer, layers):
-                self.capture_layer(name, attach=self._start_attached)
+
+            if (layer_types is not None) and (isinstance(layer, layer_types) == False):
+                continue
+
+            self.capture_layer(name, attach=self._start_attached)
 
         return self
+
+    def capture_layers_of_type(self, layers: Sequence[nn.Module]) -> CaptureManager:
+        return self.capture(layer_types=layers)
 
     def attach(self, *args, **kwargs) -> CaptureManager:
         for key in self.captures.keys():
