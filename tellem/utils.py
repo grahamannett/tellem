@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import numpy as np
 import PIL.Image as Image
 import torch
@@ -26,7 +28,7 @@ def upsample_to_image(image: torch.Tensor, overlay: torch.Tensor) -> Image:
     return overlay
 
 
-def clamp_image(x: Tensor, min: float = 0.0, max: float = 1.0) -> Tensor:
+def clamp_image(x: torch.Tensor, min: float = 0.0, max: float = 1.0) -> torch.Tensor:
     return torch.clamp(x, min, max)
 
 
@@ -48,3 +50,41 @@ class EasyDict:
 
     def __getitem__(self, key: str):
         return self.__dict__[key]
+
+
+class NestedDefaultDict(defaultdict):
+    """Similar to:
+        rec_dd = lambda: defaultdict(rec_dd)
+    which is a recursive defaultdict.
+    Allows for easily setting keys with many layers.
+
+    ===
+    Not a great datastructure in many ways since you will fetch keys that dont exist if you use it incorrectly and wont
+    get errors but still is useful when setting multiple nested dicts for other stuff
+    ===
+
+
+    Args:
+        defaultdict (_type_): _description_
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(NestedDefaultDict, self).__init__(NestedDefaultDict, *args, **kwargs)
+
+    def __repr__(self):
+        return repr(dict(self))
+
+    def to_dict(self):
+        """
+        call this if you want to save/load it later but you lose the nested functionality.
+        Otherwise it gives errors when you load it
+
+
+        Returns:
+            _type_: _description_
+        """
+        obj = dict(self)
+        for key, val in obj.items():
+            if isinstance(val, NestedDefaultDict):
+                obj[key] = val.to_dict()
+        return obj

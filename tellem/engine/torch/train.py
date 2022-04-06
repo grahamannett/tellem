@@ -1,5 +1,6 @@
 from __future__ import annotations
 import copy
+from functools import singledispatchmethod
 
 from typing import List, Union
 
@@ -75,9 +76,9 @@ class TrainerHelper:
 
         self.clear_running_vals()
 
-    # @singledispatchmethod
-    # def _dataloaders(self, arg):
-    #     raise NotImplementedError("Cant handle this dataloader type")
+    @singledispatchmethod
+    def _dataloaders(self, arg):
+        raise NotImplementedError("Cant handle this dataloader type")
 
     # @_dataloaders.register
     # def _(self, dataloaders: Union[Dict, EasyDict]):
