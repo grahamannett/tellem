@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Any, Dict, Generator, Hashable
 
 import numpy as np
 import PIL.Image as Image
@@ -40,15 +41,15 @@ class EasyDict:
     obj = EasyDict(val=val1, args={...args})
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         for key, val in kwargs.items():
             self.__setattr__(key, val)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Hashable, Any]:
         for key, val in self.__dict__.items():
             yield key, val
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> Any:
         return self.__dict__[key]
 
 
@@ -68,20 +69,19 @@ class NestedDefaultDict(defaultdict):
         defaultdict (_type_): _description_
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(NestedDefaultDict, self).__init__(NestedDefaultDict, *args, **kwargs)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(dict(self))
 
-    def to_dict(self):
-        """
+    def to_dict(self) -> Dict[Any, Any]:
+        """converts to pure dictionary which is useful when saving/loading or so you dont access keys that it would
+        otherwise automatically create
         call this if you want to save/load it later but you lose the nested functionality.
-        Otherwise it gives errors when you load it
-
 
         Returns:
-            _type_: _description_
+            Dict[Any, Any]: _description_
         """
         obj = dict(self)
         for key, val in obj.items():
