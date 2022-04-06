@@ -1,14 +1,14 @@
+from __future__ import annotations
 import copy
-from functools import singledispatchmethod
-from typing import Callable, Dict, List, Union
+
+from typing import List, Union
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from tellem.engine.torch import Capture
 from tellem.engine.torch.capture import CaptureManager
-from tellem.engine.torch.utils import Callback, DataLoaders
+from tellem.engine.torch.utils import DataLoaders
 
 from tellem.utils import EasyDict
 
@@ -36,7 +36,7 @@ class EmitInfo:
 
 
 class TrainerHelper:
-    callbacks: List["Callback"] = []
+    callbacks: List[Callback] = []
     capture_manager: CaptureManager = None
 
     def __init__(
@@ -114,7 +114,13 @@ class TrainerHelper:
         self.running_corrects = 0
 
     def batch_update_loss_and_corrects(
-        self, loss: torch.Tensor, inputs: torch.Tensor, preds: torch.Tensor, labels: torch.Tensor, *args, **kwargs
+        self,
+        loss: torch.Tensor,
+        inputs: torch.Tensor,
+        preds: torch.Tensor,
+        labels: torch.Tensor,
+        *args,
+        **kwargs,
     ) -> None:
         self.running_loss += loss.item() * inputs.size(0)
         self.running_corrects += torch.sum(preds == labels.data)
@@ -218,3 +224,28 @@ class TrainerHelper:
 
     def post_val_step(self, *args, **kwargs):
         pass
+
+
+class Callback:
+    def __init__(self, trainer_ref: TrainerHelper = None, capture_ref: CaptureManager = None) -> None:
+        self._trainer_ref = trainer_ref
+        self._capture_ref = capture_ref
+
+    def emit(self, *args, **kwargs):
+        pass
+
+    @property
+    def trainer(self):
+        return self._trainer_ref
+
+    @trainer.setter
+    def trainer(self, trainer_ref: "TrainerHelper"):
+        self._trainer_ref = trainer_ref
+
+    @property
+    def capture_manager(self):
+        return self._capture_ref
+
+    @capture_manager.setter
+    def capture_manager(self, capture_ref: CaptureManager):
+        self._capture_ref = capture_ref

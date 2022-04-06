@@ -6,7 +6,8 @@ _USES_TORCH = True
 
 Tensor = TypeVar("Tensor")
 RemovableHandle = TypeVar("RemovableHandle")
-Module = Layer = TypeVar("Module", "torch.nn.Module", "tensorflow.keras.layers.Layer")
+# Module = Layer = TypeVar("Module", torch.nn.Module, "tensorflow.keras.layers.Layer")
+Module = TypeVar("Module", torch.nn.Module)
 Model = TypeVar("Model")
 
 # PYTORCH SPECIFIC TYPES

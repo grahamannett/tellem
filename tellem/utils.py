@@ -3,8 +3,6 @@ import PIL.Image as Image
 import torch
 from torchvision import transforms
 
-from tellem.types import Tensor
-
 _USES_TORCH = True
 
 
@@ -13,7 +11,7 @@ def noise_line(tensor):
     return tensor + torch.randn(tensor.shape)
 
 
-def upsample_to_image(image: Tensor, overlay: Tensor) -> Image:
+def upsample_to_image(image: torch.Tensor, overlay: torch.Tensor) -> Image:
     """
     used for CAM and various other things where you need to go from
     intermediate activations to image

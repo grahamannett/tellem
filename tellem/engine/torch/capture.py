@@ -1,24 +1,33 @@
 from __future__ import annotations
 
 from functools import singledispatchmethod
-from typing import Any, Callable, Dict, List, Sequence, Tuple, Union
+from typing import Any, Callable, List, Sequence, Tuple
+from tellem.engine.torch.utils import flatten_module
 
 import torch
 from torch import nn
-
-from tellem.types import Model, RemovableHandle, Tensor
 
 
 class Capture:
     """capture a layer/module of a model.  either activations or gradients"""
 
-    def __init__(self, model: nn.Module, layer: str):
+    def __init__(
+        self,
+        model: nn.Module,
+        layer: str,
+        keep_activations: bool = True,
+        keep_gradients: bool = True,
+        **kwargs,
+    ):
         self.model = model
         self.layer = layer
 
         self.module = None
         self._capture_activations = False
         self._capture_gradients = False
+
+        self._keep_activations = keep_activations
+        self._keep_gradients = keep_gradients
 
         self.activations = None
         self.gradients = None
@@ -46,7 +55,7 @@ class Capture:
         if hook is None:
 
             def hook(module, inputs, outputs):
-                if self.activations is not None:
+                if (self.activations is not None) and self._keep_activations:
                     self._activations.extend(self.activations)
 
                 self.activations = outputs.detach()
@@ -68,6 +77,9 @@ class Capture:
         if hook is None:
 
             def hook(grad):
+                if self.gradients is not None and self._keep_gradients:
+                    self._gradients.extend(self.gradients)
+
                 self.gradients = grad
 
         self._capture_gradients = True
@@ -75,6 +87,10 @@ class Capture:
         hook_ = self.activations.register_hook(hook)
         self.hooks.append(hook_)
         return self
+
+    def attach(self):
+        self.capture_activations()
+        # if self.removed_hooks:
 
     def remove(self):
         while self.hooks:
@@ -95,11 +111,15 @@ class Capture:
 
 
 class CaptureManager:
-    def __init__(self, model: Model, start_attached: bool = False) -> None:
+    def __init__(self, model: nn.Module, start_attached: bool = False, **kwargs) -> None:
         self.model = model
-        self.captures = {}
 
+        self.captures = {}
         self._start_attached = start_attached
+
+    @classmethod
+    def go(cls, model: nn.Module, keep_activations=False):
+        return cls(model).capture(keep_activations=keep_activations)
 
     def __getitem__(self, key):
         return self.captures[key]
@@ -120,7 +140,7 @@ class CaptureManager:
         self.captures[key] = value
 
     # not sure if i want this function
-    def __call__(self, x: Tensor, **kwargs):
+    def __call__(self, x: torch.Tensor, **kwargs):
         preds = self.model(x)
 
         activations = {}
@@ -130,30 +150,38 @@ class CaptureManager:
 
         return activations, preds
 
-    def capture_layer(self, layer: str, attach: bool = True) -> CaptureManager:
-        capture = Capture(self.model, layer)
+    def __len__(self):
+        """return the number of captures
 
-        if attach:
+        Returns:
+            _type_: _description_
+        """
+        return len(self.captures)
+
+    def capture_layer(self, layer: str, start_attached: bool = True, **kwargs) -> CaptureManager:
+        capture = Capture(self.model, layer, **kwargs)
+
+        if start_attached:
             capture.capture_activations()
         self.__setitem__(layer, capture)
         return self
 
-    def capture(self, layer_types: List[torch.nn.Module] = None) -> CaptureManager:
-        for name, layer in self.model.named_modules():
-
-            if (layer_types is not None) and (isinstance(layer, layer_types) == False):
+    def capture(self, layer_types: List[torch.nn.Module] = None, **kwargs) -> CaptureManager:
+        for name, layer in flatten_module(self.model):
+            if (layer_types is not None) and (isinstance(layer, layer_types) is False):
                 continue
 
-            self.capture_layer(name, attach=self._start_attached)
-
+            self.capture_layer(name, attach=self._start_attached, **kwargs)
         return self
 
-    def capture_layers_of_type(self, layers: Sequence[nn.Module]) -> CaptureManager:
+    def capture_layers_of_type(self, layers: Sequence[nn.Module], **kwargs) -> CaptureManager:
         return self.capture(layer_types=layers)
 
     def attach(self, *args, **kwargs) -> CaptureManager:
-        for key in self.captures.keys():
-            self.capture_layer(key)
+        for layer, capture in self.captures.items():
+            # self.capture_layer(key)
+            # capture.capture_activations()
+            capture.attach()
 
         return self
 
@@ -161,7 +189,7 @@ class CaptureManager:
         for key, capture in self.captures.items():
             if capture:
                 capture.remove()
-            self.captures[key] = None
+            # self.captures[key] = None
 
         return self
 
