@@ -18,7 +18,8 @@ class Perturber:
     def _perturb(self, x: torch.Tensor) -> torch.Tensor:
         return self.dist.sample(x.shape)
 
-    def repeat(self, x: torch.Tensor, _num_perturbations: int = None) -> torch.Tensor:
-        _num_perturbations = _num_perturbations if _num_perturbations else self.num_perturbations
-        x = x.repeat(_num_perturbations, *(1 for _ in x.shape))
+    def repeat(self, x: torch.Tensor, num_perturbations: int = None, from_dim: int = 0) -> torch.Tensor:
+        num_perturbations = num_perturbations if num_perturbations else self.num_perturbations
+
+        x = x.repeat(num_perturbations, *(1 for _ in x.shape[from_dim:]))
         return x + self.__call__(x)

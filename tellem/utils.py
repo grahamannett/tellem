@@ -45,7 +45,7 @@ class EasyDict:
         for key, val in kwargs.items():
             self.__setattr__(key, val)
 
-    def __iter__(self) -> Generator[Hashable, Any]:
+    def __iter__(self) -> Generator[int, Hashable, Any]:
         for key, val in self.__dict__.items():
             yield key, val
 
